@@ -1,0 +1,50 @@
+services:
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    restart: always
+    ports:
+      - "5678:5678"
+    environment:
+      # 基础配置
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD=your-secure-password-here
+      
+      # 数据库配置 (使用 SQLite，如需 PostgreSQL 可扩展)
+      - DB_TYPE=sqlite
+      - DB_SQLITE_VACUUM_ON_STARTUP=true
+      
+      # 性能优化
+      - EXECUTIONS_MODE=regular
+      - EXECUTIONS_TIMEOUT=3600
+      - EXECUTIONS_TIMEOUT_MAX=7200
+      
+      # 安全与访问
+      - N8N_ENCRYPTION_KEY=your-encryption-key-change-this
+      - WEBHOOK_URL=http://localhost:5678/
+      
+      # 时区设置
+      - GENERIC_TIMEZONE=Asia/Shanghai
+      - TZ=Asia/Shanghai
+      
+      # 文件上传限制
+      - N8N_DEFAULT_BINARY_DATA_MODE=filesystem
+      
+    volumes:
+      # 数据持久化到 Docker 卷
+      - n8n_data:/home/node/.n8n
+      # 可选：本地备份目录
+      - ./backup:/backup
+      
+    # 健康检查
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# 命名卷定义
+volumes:
+  n8n_data:
+    driver: local
