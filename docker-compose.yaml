@@ -1,50 +1,81 @@
 services:
+  postgres:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=811eea3f04e265add1451b3b8d26e217
+      - POSTGRES_DB=n8n
+      - POSTGRES_NON_ROOT_USER=n8n
+      - POSTGRES_NON_ROOT_PASSWORD=589a2d587d0366cbfb0185efe775d161
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U n8n -d n8n']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   n8n:
     image: docker.n8n.io/n8nio/n8n:latest
     restart: always
     ports:
       - "5678:5678"
     environment:
-      # 基础配置
+      # 基础认证配置
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=admin
-      - N8N_BASIC_AUTH_PASSWORD=your-secure-password-here
+      - N8N_BASIC_AUTH_PASSWORD=admin
       
-      # 数据库配置 (使用 SQLite，如需 PostgreSQL 可扩展)
-      - DB_TYPE=sqlite
-      - DB_SQLITE_VACUUM_ON_STARTUP=true
+      # PostgreSQL 数据库配置
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=n8n
+      - DB_POSTGRESDB_PASSWORD=589a2d587d0366cbfb0185efe775d161
       
       # 性能优化
       - EXECUTIONS_MODE=regular
       - EXECUTIONS_TIMEOUT=3600
       - EXECUTIONS_TIMEOUT_MAX=7200
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=336  # 保留14天执行记录
       
-      # 安全与访问
-      - N8N_ENCRYPTION_KEY=your-encryption-key-change-this
+      # 安全与加密
+      - N8N_ENCRYPTION_KEY=589a2d587d0366cbfb0185efe775d162
       - WEBHOOK_URL=http://localhost:5678/
+      - N8N_HOST=localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
       
       # 时区设置
       - GENERIC_TIMEZONE=Asia/Shanghai
       - TZ=Asia/Shanghai
       
-      # 文件上传限制
+      # 文件存储
       - N8N_DEFAULT_BINARY_DATA_MODE=filesystem
       
+      # 日志级别 (debug, info, warn, error)
+      - N8N_LOG_LEVEL=info
+      
+    depends_on:
+      postgres:
+        condition: service_healthy
+        
     volumes:
-      # 数据持久化到 Docker 卷
       - n8n_data:/home/node/.n8n
-      # 可选：本地备份目录
       - ./backup:/backup
       
-    # 健康检查
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 60s
 
-# 命名卷定义
 volumes:
+  postgres_data:
+    driver: local
   n8n_data:
     driver: local
