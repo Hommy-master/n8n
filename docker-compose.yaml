@@ -6,12 +6,12 @@ services:
       - POSTGRES_USER=admin
       - POSTGRES_PASSWORD=811eea3f04e265add1451b3b8d26e217
       - POSTGRES_DB=n8n
-      - POSTGRES_NON_ROOT_USER=n8n
-      - POSTGRES_NON_ROOT_PASSWORD=589a2d587d0366cbfb0185efe775d161
+      # 移除无效的 NON_ROOT 变量
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql   # 挂载初始化脚本
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -h localhost -U n8n -d n8n']
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U admin -d n8n']   # 改用已存在的用户admin检查
       interval: 5s
       timeout: 5s
       retries: 10
